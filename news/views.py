@@ -4,6 +4,8 @@ import datetime as dt
 from .models import Article
 from .forms import NewsLetterForm
 from .email import send_welcome_email
+from django.contrib.auth.decorators import login_required
+from .forms import NewArticleForm, NewsLetterForm
 
 
 def welcome(request):
@@ -63,12 +65,28 @@ def search_results(request):
         return render(request, 'all-news/search.html', {"message": message})
 
 
+# limit only an authenticated User to view a full article
+@login_required(login_url='/accounts/login/')
 def article(request, article_id):
     try:
         article = Article.objects.get(id=article_id)
     except DoesNotExist:
         raise Http404()
     return render(request, "all-news/article.html", {"article": article})
+
+
+@login_required(login_url='/accounts/login/')
+def new_article(request):
+    current_user = request.user
+    if request.method == 'POST':
+        form = NewArticleForm(request.POST, request.FILES)
+        if form.is_valid():
+            article = form.save(commit=False)
+            article.editor = current_user
+            article.save()
+    else:
+        form = NewArticleForm()
+    return render(request, 'new_article.html', {"form": form})
 
 
 def convert_dates(dates):
