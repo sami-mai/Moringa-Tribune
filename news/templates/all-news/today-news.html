@@ -1,4 +1,4 @@
-{%extends 'all-news/base.html'%} {% load bootstrap3 %}
+{%extends 'all-news/base.html'%} {% load bootstrap3 %}{% load static %}
 <!--  -->
 {% block content %}
 <!--  -->
@@ -11,8 +11,9 @@
 
   <div class="row">
     <!-- displaying News articles -->
+    <!-- displaing News articles -->
     <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-      <h2 class="text-center"> {{ news_item.title }} </h2>
+      <a href="{% url 'article' news_item.id %}"><h2 class="text-center"> {{ news_item.title }} </h2></a>
     </div>
     <!--Display news Article images  -->
     <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
@@ -37,4 +38,8 @@
 
 </div>
 
+{% endblock %}
+<!--End of the block content-->
+{% block scripts %} {{block.super}}
+<script type="text/javascript" src="{%static 'js/newsletter.js'%}"></script>
 {% endblock %}
