@@ -7,10 +7,15 @@ from .email import send_welcome_email
 from django.contrib.auth.decorators import login_required
 from .forms import NewArticleForm, NewsLetterForm
 
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import MoringaMerch
+from .serializers import MerchSerializer
+from rest_framework import status
+from .permissions import IsAdminOrReadOnly
+
 
 def welcome(request):
-    # return HttpResponse('Welcome to the Moringa Tribune')
-    # render template
     return render(request, 'welcome.html')
 
 
@@ -30,24 +35,6 @@ def newsletter(request):
     send_welcome_email(name, email)
     data = {'success': 'You have been successfully added to mailing list'}
     return JsonResponse(data)
-# def news_today(request):
-#     date = dt.date.today()
-#     news = Article.todays_news()
-#     if request.method == 'POST':
-#         form = NewsLetterForm(request.POST)
-#         if form.is_valid():
-#             # print('valid')
-#             name = form.cleaned_data['your_name']
-#             email = form.cleaned_data['email']
-#
-#             recipient = NewsLetterRecipients(name=name, email=email)
-#             recipient.save()
-#             send_welcome_email(name, email)
-#
-#             HttpResponseRedirect('news_today')
-#     else:
-#         form = NewsLetterForm()
-#     return render(request, 'all-news/today-news.html', {"date": date, "news": news, "letterForm":form})
 
 
 # View Function to present news from past days
@@ -132,50 +119,46 @@ def news_of_day(request):
     return HttpResponse(html)
 
 
-# Create your views here.
-# def news_of_day(request):
-#     date = dt.date.today()
-#     html = f'''
-#         <html>
-#             <body>
-#                 <h1> {date.day}-{date.month}-{date.year}</h1>
-#             </body>
-#         </html>
-#             '''
-#     return HttpResponse(html)
+class MerchList(APIView):
+    permission_classes = (IsAdminOrReadOnly,)
+
+    def get(self, request, format=None):
+        all_merch = MoringaMerch.objects.all()
+        serializers = MerchSerializer(all_merch, many=True)
+        return Response(serializers.data)
+
+    def post(self, request, format=None):
+        serializers = MerchSerializer(data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data, status=status.HTTP_201_CREATED)
+        return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# def past_days_news(request, past_date):
-#     # Converts data from the string Url
-#     date = dt.datetime.strptime(past_date, '%Y-%m-%d').date()
-#
-#     day = convert_dates(date)
-#     html = f'''
-#         <html>
-#             <body>
-#                 <h1>News for {day} {date.day}-{date.month}-{date.year}</h1>
-#             </body>
-#         </html>
-#             '''
-#     return HttpResponse(html)
+class MerchDescription(APIView):
+    permission_classes = (IsAdminOrReadOnly,)
 
+    def get_merch(self, pk):
+        try:
+            return MoringaMerch.objects.get(pk=pk)
+        except MoringaMerch.DoesNotExist:
+            return Http404
 
-# def past_days_news(request, past_date):
+    def get(self, request, pk, format=None):
+        merch = self.get_merch(pk)
+        serializers = MerchSerializer(merch)
+        return Response(serializers.data)
 
-    # try:
-        # Converts data from the string Url
-        # date = dt.datetime.strptime(past_date, '%Y-%m-%d').date()
-        #
-        # day = convert_dates(date)
-        # html = f'''
-        #     <html>
-        #         <body>
-        #             <h1>News for {day} {date.day}-{date.month}-{date.year}</h1>
-        #         </body>
-        #     </html>
-        #         '''
-        # return HttpResponse(html)
+    def put(self, request, pk, format=None):
+        merch = self.get_merch(pk)
+        serializers = MerchSerializer(merch, request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data)
+        else:
+            return Response(serializers.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # except ValueError:
-        # Raise 404 error when ValueError is thrown
-        # raise Http404()
+    def delete(self, request, pk, format=None):
+        merch = self.get_merch(pk)
+        merch.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
